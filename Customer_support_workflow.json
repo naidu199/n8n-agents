@@ -1,0 +1,366 @@
+{
+  "name": "Customer support workflow",
+  "nodes": [
+    {
+      "parameters": {
+        "pollTimes": {
+          "item": [
+            {
+              "mode": "everyMinute"
+            }
+          ]
+        },
+        "simple": false,
+        "filters": {},
+        "options": {}
+      },
+      "type": "n8n-nodes-base.gmailTrigger",
+      "typeVersion": 1.2,
+      "position": [
+        -320,
+        -20
+      ],
+      "id": "7f57e585-f7c9-452b-9e42-86df15c3997b",
+      "name": "Gmail Trigger",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "R8PYpTN4rtKsylkf",
+          "name": "narasimhanaidu1909@gmail.com"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "inputText": "={{ $json.text }}",
+        "categories": {
+          "categories": [
+            {
+              "category": "Customer Support",
+              "description": "An email that is related to helping out the customers. they may be asking questions about polices or question about our products or services\n"
+            },
+            {
+              "category": "Other",
+              "description": "not related to customer support"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.textClassifier",
+      "typeVersion": 1.1,
+      "position": [
+        -100,
+        -20
+      ],
+      "id": "af54e8df-bcc4-4abf-a094-e1e67a54b878",
+      "name": "Text Classifier"
+    },
+    {
+      "parameters": {
+        "modelName": "models/gemini-2.0-flash-exp",
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatGoogleGemini",
+      "typeVersion": 1,
+      "position": [
+        -160,
+        180
+      ],
+      "id": "32796a3e-31c3-4a16-aaea-03052d8a3e70",
+      "name": "Google Gemini Chat Model",
+      "credentials": {
+        "googlePalmApi": {
+          "id": "9oITPCXAKXN5TWhh",
+          "name": "Google Gemini(PaLM) Api account"
+        }
+      }
+    },
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.noOp",
+      "typeVersion": 1,
+      "position": [
+        240,
+        180
+      ],
+      "id": "dac14ec5-8ad9-4087-8528-0525089cda27",
+      "name": "No Operation, do nothing"
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "={{ $json.text }}",
+        "options": {
+          "systemMessage": "=#overview \nyou are a customer support agent for tech haven. your job is to respond to incoming emails with relevant information using your knowledgebase tool..\n\n#Instructions\n- your o/p should be friendly with emojis\n\n## Output \n- only body content of the email"
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 2,
+      "position": [
+        420,
+        -140
+      ],
+      "id": "ab99458f-8bf5-4432-8157-0c88c0924635",
+      "name": "AI Agent"
+    },
+    {
+      "parameters": {
+        "modelName": "models/gemini-2.0-flash-exp",
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatGoogleGemini",
+      "typeVersion": 1,
+      "position": [
+        480,
+        120
+      ],
+      "id": "3e4c748d-0723-4d6c-b8c0-2fa951da5df9",
+      "name": "Google Gemini Chat Model1",
+      "credentials": {
+        "googlePalmApi": {
+          "id": "9oITPCXAKXN5TWhh",
+          "name": "Google Gemini(PaLM) Api account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "mode": "retrieve-as-tool",
+        "toolName": "knowledgeBase",
+        "toolDescription": "call this tool to access Policy and FAQ information ",
+        "pineconeIndex": {
+          "__rl": true,
+          "value": "rag-ai-agent",
+          "mode": "list",
+          "cachedResultName": "rag-ai-agent"
+        },
+        "options": {
+          "pineconeNamespace": "FAQ"
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.vectorStorePinecone",
+      "typeVersion": 1.2,
+      "position": [
+        700,
+        100
+      ],
+      "id": "f5ae59d6-527b-4fce-a42f-a56df67bca60",
+      "name": "Pinecone Vector Store",
+      "credentials": {
+        "pineconeApi": {
+          "id": "G07TxX0VgFLJUeYj",
+          "name": "PineconeApi account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "modelName": "models/embedding-001"
+      },
+      "type": "@n8n/n8n-nodes-langchain.embeddingsGoogleGemini",
+      "typeVersion": 1,
+      "position": [
+        640,
+        280
+      ],
+      "id": "5f4962b6-e16f-47a4-a159-ad26501ce672",
+      "name": "Embeddings Google Gemini",
+      "credentials": {
+        "googlePalmApi": {
+          "id": "9oITPCXAKXN5TWhh",
+          "name": "Google Gemini(PaLM) Api account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "reply",
+        "messageId": "={{ $('Gmail Trigger').item.json.id }}",
+        "emailType": "text",
+        "message": "={{ $json.output[0].text }}",
+        "options": {
+          "appendAttribution": false
+        }
+      },
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.1,
+      "position": [
+        780,
+        -140
+      ],
+      "id": "a8e09762-93b4-46fd-92f0-92e906c4b132",
+      "name": "Gmail",
+      "webhookId": "bb0821ea-76f5-498c-a4a6-d160ac62f21d",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "R8PYpTN4rtKsylkf",
+          "name": "narasimhanaidu1909@gmail.com"
+        }
+      }
+    }
+  ],
+  "pinData": {
+    "Gmail Trigger": [
+      {
+        "json": {
+          "id": "1973c095986daad2",
+          "threadId": "1973c095986daad2",
+          "labelIds": [
+            "UNREAD",
+            "IMPORTANT",
+            "CATEGORY_PERSONAL",
+            "INBOX"
+          ],
+          "sizeEstimate": 7337,
+          "headers": {
+            "delivered-to": "Delivered-To: narasimhanaidu1909@gmail.com",
+            "received": "Received: from mail-sor-f41.google.com (mail-sor-f41.google.com. [209.85.220.41])\r\n        by mx.google.com with SMTPS id 3f1490d57ef6-e7f74290ce5sor7142431276.1.2025.06.04.10.42.14\r\n        for <narasimhanaidu1909@gmail.com>\r\n        (Google Transport Security);\r\n        Wed, 04 Jun 2025 10:42:14 -0700 (PDT)",
+            "x-received": "X-Received: by 2002:a05:6902:240f:b0:e81:7836:df03 with SMTP id\r\n 3f1490d57ef6-e8179c00e2bmr4964451276.2.1749058934286; Wed, 04 Jun 2025\r\n 10:42:14 -0700 (PDT)",
+            "arc-seal": "ARC-Seal: i=1; a=rsa-sha256; t=1749058935; cv=none;\r\n        d=google.com; s=arc-20240605;\r\n        b=CKw4vUqxTMBrcAJd3do3k1ROU1vjp+FezqQTipu++AsE5eV/4OUBAhFZnrguKsYpHz\r\n         9/9bF2keNiwebVn9fXh3DE3QN0i/vvpdvK/pl/0bFSUo5gI0w8Y15AT5OvndD+LaEZqz\r\n         Xzbd7vZ75t/idSFvpbHOZWBzMwqAzDksvodDLFmtrg3VQG2K953l7QATIMgJzTt3TnNb\r\n         H81EKrpR5hCQdNqWSulTTuWa/qAubZQ86nYONPK4P/VE11RmT7Xz5sqN5b6o+att1QGl\r\n         1gkdBOEzgIvJcTUScVxfpGhTDSzcXM/bIWLyuSv3NZ2XnWuWLl4cC2tkwbLf8F0Qme8X\r\n         Y5ng==",
+            "arc-message-signature": "ARC-Message-Signature: i=1; a=rsa-sha256; c=relaxed/relaxed; d=google.com; s=arc-20240605;\r\n        h=to:subject:message-id:date:from:mime-version:dkim-signature;\r\n        bh=8nvc6PLqLWV8Dca6+aYPxM1/lPiSylxpmL5y5MpUKt8=;\r\n        fh=Q4zpy5aost1b/fNV/hPAHJB91VqnkxX8FA+VLrJ5+bY=;\r\n        b=lDEkvO39RQp7xR4wna5H80w7a/29ad5+GnzRLLEnA2EwPCnuQcx494ZfPve/AZ89h6\r\n         SDAkQcqiQVRIRCjsLRNFulUAoBTdvD/NeiG6QKDWtQpEaNkuyI2Z8RKtc6LyhSDOs29d\r\n         6WOrJ5qW+TASl3drzmKcvkXlOy52THURVueDNE5rcz6l3qTZN0K+TBuCyz8B7jn030mG\r\n         cae4kR546T3XQWffDWWQcPa8PxfQ/1z19B/Do6GJ14e1QKpztD0OBaQTkgwWN23SqnyO\r\n         f4iODgktMW/awmWpBxYNerRwBBb0QzOJCpoLRWezE1Y/adpn4XCr6SD10Gbe0A+LzQoU\r\n         nyqA==;\r\n        dara=google.com",
+            "arc-authentication-results": "ARC-Authentication-Results: i=1; mx.google.com;\r\n       dkim=pass header.i=@vishnu-edu-in.20230601.gappssmtp.com header.s=20230601 header.b=goPuys17;\r\n       spf=pass (google.com: domain of 22pa1a0577@vishnu.edu.in designates 209.85.220.41 as permitted sender) smtp.mailfrom=22pa1a0577@vishnu.edu.in;\r\n       dmarc=pass (p=REJECT sp=NONE dis=NONE) header.from=vishnu.edu.in;\r\n       dara=pass header.i=@gmail.com",
+            "return-path": "Return-Path: <22pa1a0577@vishnu.edu.in>",
+            "received-spf": "Received-SPF: pass (google.com: domain of 22pa1a0577@vishnu.edu.in designates 209.85.220.41 as permitted sender) client-ip=209.85.220.41;",
+            "authentication-results": "Authentication-Results: mx.google.com;\r\n       dkim=pass header.i=@vishnu-edu-in.20230601.gappssmtp.com header.s=20230601 header.b=goPuys17;\r\n       spf=pass (google.com: domain of 22pa1a0577@vishnu.edu.in designates 209.85.220.41 as permitted sender) smtp.mailfrom=22pa1a0577@vishnu.edu.in;\r\n       dmarc=pass (p=REJECT sp=NONE dis=NONE) header.from=vishnu.edu.in;\r\n       dara=pass header.i=@gmail.com",
+            "dkim-signature": "DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed;\r\n        d=vishnu-edu-in.20230601.gappssmtp.com; s=20230601; t=1749058934; x=1749663734; dara=google.com;\r\n        h=to:subject:message-id:date:from:mime-version:from:to:cc:subject\r\n         :date:message-id:reply-to;\r\n        bh=8nvc6PLqLWV8Dca6+aYPxM1/lPiSylxpmL5y5MpUKt8=;\r\n        b=goPuys1738V2rL3p9XCJJsj/nO7u4gkhRzAzrFKkVgBa5rlOJ0BFp+qtQCDxyAAsKj\r\n         gqZ3Pgaxei3wib7t1bz6y5U+mmWUJhzQ0tcBeEykDxo7dFDsWwLJpm9sqGS+sqcTiN1F\r\n         +clG+fo2zugB17GNRn3dlO9w4ElUtLVgkaq4pAGOZl1Y/pzDnz/xDg5bdv99Rq/1r9cD\r\n         r/1W328z+5nrKVu8WwPJ5LY5XIJdCR12dH86jN1HbxxguBwc2h28YuJEUi+M2JOiLuhL\r\n         aX42BGCejY2uWQlnN/HTeNAOH/ZIXay5qZ27oJFf1s29J1VogYGNvu+doPD3ydCK4a7P\r\n         jqiQ==",
+            "x-google-dkim-signature": "X-Google-DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed;\r\n        d=1e100.net; s=20230601; t=1749058934; x=1749663734;\r\n        h=to:subject:message-id:date:from:mime-version:x-gm-message-state\r\n         :from:to:cc:subject:date:message-id:reply-to;\r\n        bh=8nvc6PLqLWV8Dca6+aYPxM1/lPiSylxpmL5y5MpUKt8=;\r\n        b=acORIrxHtuak/AfKytOSI9wKNOQl9qj6zr0/edcx8r/1RmVKpgptTIlqm2hDLaH2CB\r\n         TaQ6V1ER9Z86Zhg9uRrUBM46YO7WQpD7tOIESUVGp+bv6Xie7Cw6uay7A3Yj3cEwBsaC\r\n         hNDPJhpWf3W8Z4DeHmrEIQ23uGDGLcjrh15/aXPVTLSwGYE0FlIhPOKFNX9DXjEaaTv8\r\n         K98jJGhWy+LoRGy3fIaPCal7XHvzl950jziEb0Zb1wf24aG0j9hq85EVbQe6AJGvDpjN\r\n         Zr8IGnYlBou2RNbv8oW2CKjUO3lIc+BVFBd031yecsZBfhhJBTb5RxtSfFo4R5OKmTa1\r\n         MOMw==",
+            "x-gm-message-state": "X-Gm-Message-State: AOJu0Yw6KMs/pw1KqDDYWg/ipvefRXXxsuS3sVGQQyeYYcyFe6VDMFEm\r\n\tx0xXBInckHFCmTilHOFUOZnKob04/EG3OgjaG1qJmdfWc+njuUkBK7gq/FeYtgzZ67JuaVL8MPW\r\n\tLIDyurN0TlrWAeNH9HrklKGsMn8lc+FbQz1DUB0LdiUIq1UPDR9jxGxOPTQ==",
+            "x-gm-gg": "X-Gm-Gg: ASbGncvTw8aMSxuAGP7ngBKWvN/NK70aVK5nBHXfN06X1zjSbVHPNM4JbY38hd0Yfec\r\n\t+U2byt9fK4ezk+vwuA61AkeMIsjQsFapTOHjYEYxNWW1QVt4JkDA9hwBirGTOL46qh8VBvbb7wr\r\n\tnsFEtucv7qXcT3m7QHsLg2EBXDyo0P3+faYg==",
+            "x-google-smtp-source": "X-Google-Smtp-Source: AGHT+IFUTNwoZ4dI67cRtQKf1BlosU9n/SgfVFxWyWgcfF9pKI1LKeHxK48VveHMBjYinq1/6y6cVfSayuMMFFtTrfU=",
+            "mime-version": "MIME-Version: 1.0",
+            "from": "From: KORRAPATI THIRUMALA NARASIMHA NAIDU <22pa1a0577@vishnu.edu.in>",
+            "date": "Date: Wed, 4 Jun 2025 23:12:02 +0530",
+            "x-gm-features": "X-Gm-Features: AX0GCFviQ4kgpP5Y7lSDyM1T9BxGqBwrvqP--DIh1Ci_1EPFagXEDSli7KkOZAs",
+            "message-id": "Message-ID: <CAAMruJbUMY81Lg85Xd9B3F_uNn-_JhvGqjdOq7qw6Dta58Cn_g@mail.gmail.com>",
+            "subject": "Subject: Inquiry About Return Policy",
+            "to": "To: Narasimha naidu Korrapati <narasimhanaidu1909@gmail.com>",
+            "content-type": "Content-Type: multipart/alternative; boundary=\"000000000000783e370636c284c0\""
+          },
+          "html": "<div dir=\"ltr\"><p dir=\"auto\" style=\"white-space-collapse: preserve;\">Dear Store Support Team,</p>\n<p dir=\"auto\" style=\"white-space-collapse: preserve;\">I hope this email finds you well. I recently made a purchase through your website (Order #123456) and have a question about your return policy. Could you please clarify if items purchased during a promotional sale are eligible for returns, and if so, what is the process for initiating a return?</p>\n<p dir=\"auto\" style=\"white-space-collapse: preserve;\">Additionally, I’d like to know if return shipping costs are covered for defective items. Any further details you can provide would be greatly appreciated.</p>\n<p dir=\"auto\" style=\"white-space-collapse: preserve;\">Thank you for your time and assistance. I look forward to your response.</p>\n<p dir=\"auto\" style=\"white-space-collapse: preserve;\">Best regards,<br>K T N Naidu</p></div>\n",
+          "text": "Dear Store Support Team,\n\nI hope this email finds you well. I recently made a purchase through your\nwebsite (Order #123456) and have a question about your return policy. Could\nyou please clarify if items purchased during a promotional sale are\neligible for returns, and if so, what is the process for initiating a\nreturn?\n\nAdditionally, I’d like to know if return shipping costs are covered for\ndefective items. Any further details you can provide would be greatly\nappreciated.\n\nThank you for your time and assistance. I look forward to your response.\n\nBest regards,\nK T N Naidu\n",
+          "textAsHtml": "<p>Dear Store Support Team,</p><p>I hope this email finds you well. I recently made a purchase through your<br/>website (Order #123456) and have a question about your return policy. Could<br/>you please clarify if items purchased during a promotional sale are<br/>eligible for returns, and if so, what is the process for initiating a<br/>return?</p><p>Additionally, I&rsquo;d like to know if return shipping costs are covered for<br/>defective items. Any further details you can provide would be greatly<br/>appreciated.</p><p>Thank you for your time and assistance. I look forward to your response.</p><p>Best regards,<br/>K T N Naidu</p>",
+          "subject": "Inquiry About Return Policy",
+          "date": "2025-06-04T17:42:02.000Z",
+          "to": {
+            "value": [
+              {
+                "address": "narasimhanaidu1909@gmail.com",
+                "name": "Narasimha naidu Korrapati"
+              }
+            ],
+            "html": "<span class=\"mp_address_group\"><span class=\"mp_address_name\">Narasimha naidu Korrapati</span> &lt;<a href=\"mailto:narasimhanaidu1909@gmail.com\" class=\"mp_address_email\">narasimhanaidu1909@gmail.com</a>&gt;</span>",
+            "text": "\"Narasimha naidu Korrapati\" <narasimhanaidu1909@gmail.com>"
+          },
+          "from": {
+            "value": [
+              {
+                "address": "22pa1a0577@vishnu.edu.in",
+                "name": "KORRAPATI THIRUMALA NARASIMHA NAIDU"
+              }
+            ],
+            "html": "<span class=\"mp_address_group\"><span class=\"mp_address_name\">KORRAPATI THIRUMALA NARASIMHA NAIDU</span> &lt;<a href=\"mailto:22pa1a0577@vishnu.edu.in\" class=\"mp_address_email\">22pa1a0577@vishnu.edu.in</a>&gt;</span>",
+            "text": "\"KORRAPATI THIRUMALA NARASIMHA NAIDU\" <22pa1a0577@vishnu.edu.in>"
+          },
+          "messageId": "<CAAMruJbUMY81Lg85Xd9B3F_uNn-_JhvGqjdOq7qw6Dta58Cn_g@mail.gmail.com>"
+        }
+      }
+    ]
+  },
+  "connections": {
+    "Gmail Trigger": {
+      "main": [
+        [
+          {
+            "node": "Text Classifier",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Google Gemini Chat Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Text Classifier",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Text Classifier": {
+      "main": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "No Operation, do nothing",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Google Gemini Chat Model1": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Pinecone Vector Store": {
+      "ai_tool": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Embeddings Google Gemini": {
+      "ai_embedding": [
+        [
+          {
+            "node": "Pinecone Vector Store",
+            "type": "ai_embedding",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "AI Agent": {
+      "main": [
+        [
+          {
+            "node": "Gmail",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "versionId": "3a8fec87-0af3-4177-8c5a-dfe25563edde",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "df2f67acc773fe0b241a1e5b505c45e0a9ae663c9b08105514e7230e87a72062"
+  },
+  "id": "cDqZMNXHaGdMeHY2",
+  "tags": []
+}
